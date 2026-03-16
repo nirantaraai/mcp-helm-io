@@ -1,0 +1,22 @@
+context: .
+dockerfile: Dockerfile
+tags:
+  - mcp-helm-server:latest
+  - mcp-helm-server:dev
+buildArgs:
+  VERSION: "dev"
+target: ""
+platform:
+  - linux/amd64
+  - linux/arm64
+noCache: false
+pull: true
+quiet: false
+labels:
+  maintainer: "nirantaraai"
+  version: "dev"
+  description: "MCP Helm Server - Helm operations via Model Context Protocol"
+network: default
+progress: auto
+
+

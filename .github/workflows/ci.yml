@@ -1,0 +1,89 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      
+      - name: Install Mage
+        run: go install github.com/magefile/mage@latest
+      
+      - name: Run tests
+        run: mage test:unit
+      
+      - name: Build binary
+        run: mage build:linux
+      
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-helm-server
+          path: bin/linux_amd64/
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      
+      - name: Install Mage
+        run: go install github.com/magefile/mage@latest
+      
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: mcp-helm-server
+          path: bin/linux_amd64/
+      
+      - name: Log in to Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      
+      - name: Build and Push Docker
+        run: mage docker:buildAndPush
+
+  release:
+    needs: docker
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: mcp-helm-server
+          path: .
+      
+      - name: Create archive
+        run: tar -czf mcp-helm-server-linux-amd64.tar.gz mcp-helm-server-linux-amd64
+      
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: mcp-helm-server-linux-amd64.tar.gz
+
+# Made with Bob

@@ -85,5 +85,3 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: mcp-helm-server-linux-amd64.tar.gz
-
-# Made with Bob
